@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema Distribuido — Concurrencia + VSDM</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <aside class="nav">
+      <h2>Navegación</h2>
+      <a href="#conceptos">Conceptos base</a>
+      <a href="#concurrencia">Concurrencia</a>
+      <a href="#coordinacion">Coordinación & Consistencia</a>
+      <a href="#vsdm">VSDM (Flujo de navegación)</a>
+      <a href="#grid-flex">Grid + Flexbox</a>
+      <a href="#glosario">Glosario</a>
+    </aside>
+
+    <header class="hero">
+      <h1>Sistema Distribuido: Concurrencia, Coordinación y Navegación (VSDM)</h1>
+      <p>One‑page informativo construido con <strong>CSS Grid</strong> + <strong>Flexbox</strong>. Incluye <strong>diagrama SVG</strong> de concurrencia y un <strong>flujo VSDM</strong> de la navegación.</p>
+    </header>
+
+    <main id="content">
+      <section id="conceptos">
+        <h3>Conceptos base</h3>
+        <div class="cards">
+          <div class="card">
+            <span class="badge">Procesos</span>
+            <p>Un <em>proceso</em> es una instancia de ejecución con su propio espacio de direcciones. En un sistema distribuido, múltiples procesos corren en nodos distintos y se comunican por mensajes.</p>
+          </div>
+          <div class="card">
+            <span class="badge">Concurrencia</span>
+            <p>Dos o más procesos progresan en el tiempo solapando pasos de ejecución. No implica simultaneidad real, pero sí <em>interleaving</em> de eventos observables.</p>
+          </div>
+          <div class="card">
+            <span class="badge">Comunicación</span>
+            <p>Generalmente <strong>paso de mensajes</strong> (RPC, colas, gRPC, HTTP) sobre redes no deterministas: la latencia varía, puede haber pérdida/duplicación y reordenamientos.</p>
+          </div>
+          <div class="card">
+            <span class="badge">Relojes lógicos</span>
+            <p>En ausencia de un reloj global, se usan <strong>Lamport</strong> y <strong>vector clocks</strong> para inferir relaciones <code>happens‑before</code> y causalidad entre eventos.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="concurrencia">
+        <h3>Diagrama SVG de Concurrencia (mensajería + causalidad)</h3>
+        <div class="svg-wrap">
+          <!-- Línea de tiempo de 3 procesos con eventos y mensajes (estilo secuencia) -->
+          <svg viewBox="0 0 980 420" width="100%" height="100%" role="img" aria-label="Diagrama de concurrencia con procesos y mensajes">
+            <!-- Lanes -->
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="var(--accent)" />
+              </marker>
+              <marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="var(--accent2)" />
+              </marker>
+            </defs>
+            
+            <!-- Process lanes -->
+            <g stroke="#203041" stroke-width="2">
+              <line x1="110" y1="60" x2="110" y2="380" />
+              <line x1="490" y1="60" x2="490" y2="380" />
+              <line x1="870" y1="60" x2="870" y2="380" />
+            </g>
+            
+            <!-- Labels -->
+            <g fill="var(--text)" font-size="14">
+              <text x="70" y="40">Proceso P1</text>
+              <text x="450" y="40">Proceso P2</text>
+              <text x="830" y="40">Proceso P3</text>
+            </g>
+            
+            <!-- Events (circles) -->
+            <g fill="#172334" stroke="#2a3a50">
+              <!-- P1 events -->
+              <circle cx="110" cy="90" r="8" />
+              <circle cx="110" cy="170" r="8" />
+              <circle cx="110" cy="300" r="8" />
+              <!-- P2 events -->
+              <circle cx="490" cy="120" r="8" />
+              <circle cx="490" cy="210" r="8" />
+              <circle cx="490" cy="330" r="8" />
+              <!-- P3 events -->
+              <circle cx="870" cy="140" r="8" />
+              <circle cx="870" cy="260" r="8" />
+              <circle cx="870" cy="350" r="8" />
+            </g>
+            
+            <!-- Messages -->
+            <g stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow)">
+              <!-- P1 -> P2 -->
+              <line x1="118" y1="90" x2="482" y2="120" />
+              <!-- P2 -> P3 -->
+              <line x1="498" y1="210" x2="862" y2="260" />
+            </g>
+            <g stroke="var(--accent2)" stroke-width="2" fill="none" marker-end="url(#arrow2)">
+              <!-- P3 -> P1 (tarde) -->
+              <line x1="878" y1="350" x2="118" y2="300" />
+            </g>
+            
+            <!-- Annotations -->
+            <g fill="var(--muted)" font-size="12">
+              <text x="155" y="82">send m1</text>
+              <text x="505" y="115">recv m1</text>
+              <text x="525" y="202">send m2</text>
+              <text x="885" y="255">recv m2</text>
+              <text x="760" y="345">send m3</text>
+              <text x="140" y="295">recv m3</text>
+            </g>
+            
+            <!-- Happens-before hints -->
+            <g fill="var(--muted)" font-size="12">
+              <text x="200" y="150">m1 ⇒ establece causalidad entre P1@t1 y P2@t2</text>
+              <text x="545" y="290">Cadena causal: P1 → P2 → P3</text>
+            </g>
+          </svg>
+          <div class="caption">Tres procesos concurrentes intercambian mensajes. Las flechas definen relaciones <code>happens‑before</code> (Lamport). La recepción de un mensaje nunca puede anteceder al envío: impone orden parcial, no total.</div>
+        </div>
+        <div class="cards" aria-label="Controles de simulación">
+          <div class="card card--wide">
+            <span class="badge">Simulación</span>
+            <p class="muted">Animá los mensajes para mostrar latencia variable y orden parcial.</p>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+              <button class="btn" id="playSim">▶️ Play</button>
+              <button class="btn" id="pauseSim">⏸️ Pause</button>
+              <button class="btn" id="resetSim">⟲ Reset</button>
+              <label class="muted" style="display:flex;align-items:center;gap:.4rem">Velocidad<input id="speedSim" type="range" min="0.25" max="2" step="0.25" value="1"></label>
+              <label class="muted" style="display:flex;align-items:center;gap:.4rem"><input id="varianceSim" type="checkbox" checked> Latencia variable</label>
+            </div>
+            
+          </div>
+        </div>
+        <p class="muted">Descripción: Cada proceso avanza con su propio reloj. Al enviar un mensaje, se adjunta el <em>timestamp lógico</em>. El receptor actualiza su reloj lógico como <code>max(local, recibido)+1</code> para preservar la causalidad.</p>
+      </section>
+
+      <section id="coordinacion">
+        <h3>Coordinación & Consistencia</h3>
+        <div class="cards">
+          <div class="card">
+            <span class="badge">Exclusión mutua</span>
+            <p>Sin memoria compartida, se implementa con <strong>algoritmos por mensajes</strong>: Ricart‑Agrawala, <em>token ring</em>, o coordinador (elección de líder con Bully/Raft/Chang‑Roberts).</p>
+          </div>
+          <div class="card">
+            <span class="badge">Consistencia</span>
+            <p>Modelos: <em>estricta</em>, <em>secuencial</em>, <em>causal</em>, <em>eventual</em>. Comercios web suelen optar por <strong>eventual</strong> + <em>read‑repair</em> y <em>quórums</em> (W+R&gt;N).</p>
+          </div>
+          <div class="card">
+            <span class="badge">Idempotencia</span>
+            <p>En redes no confiables, los <em>reintentos</em> pueden duplicar efectos. 
+              Diseñar operaciones idempotentes (p. ej. <code>PUT</code> de un estado) o usar <strong>deduplicación</strong> por <em>message‑id</em>.</p>
+          </div>
+          <div class="card">
+            <span class="badge">Tolerancia a fallos</span>
+            <p>Replicación (primario‑réplicas o consenso), <em>heartbeats</em>, reconfiguración, y <strong>backoff</strong> exponencial. 
+              Relación con el teorema CAP: ante particiones, elegir C o A.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="vsdm">
+        <h3>VSDM — Flujo de Navegación</h3>
+        <p>El <strong>VSDM</strong> (Visual Structure & Design Map) documenta el flujo y la jerarquía de pantallas. A continuación, un mapa de navegación de esta misma one‑page para orientar la experiencia.</p>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 900 420" width="100%" height="100%" role="img" aria-label="Mapa VSDM del sitio">
+            <defs>
+              <marker id="arrV" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#6be7b2" />
+              </marker>
+              <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.4"/></filter>
+              <style>
+                .node{fill:#0f1720; stroke:#243347; stroke-width:1.2; rx:10; ry:10; filter:url(#shadow)}
+                .label{fill:#e7eef7; font: 14px system-ui}
+                .mut{fill:#9fb3c8; font:12px system-ui}
+              </style>
+            </defs>
+            
+            <!-- Nodes -->
+            <rect class="node" x="380" y="30" width="140" height="48" />
+            <text class="label" x="450" y="60" text-anchor="middle">Inicio (Hero)</text>
+
+            <rect class="node" x="120" y="130" width="180" height="60" />
+            <text class="label" x="210" y="160" text-anchor="middle">Conceptos base</text>
+
+            <rect class="node" x="360" y="130" width="180" height="60" />
+            <text class="label" x="450" y="160" text-anchor="middle">Concurrencia (SVG)</text>
+
+            <rect class="node" x="600" y="130" width="180" height="60" />
+            <text class="label" x="690" y="160" text-anchor="middle">Coordinación & Consistencia</text>
+
+            <rect class="node" x="260" y="250" width="180" height="60" />
+            <text class="label" x="350" y="280" text-anchor="middle">VSDM</text>
+
+            <rect class="node" x="500" y="250" width="180" height="60" />
+            <text class="label" x="590" y="280" text-anchor="middle">Grid + Flexbox</text>
+
+            <rect class="node" x="380" y="340" width="140" height="48" />
+            <text class="label" x="450" y="370" text-anchor="middle">Glosario</text>
+
+            <!-- Edges -->
+            <g stroke="#36536f" stroke-width="2" fill="none" marker-end="url(#arrV)">
+              <line x1="450" y1="78" x2="210" y2="130" />
+              <line x1="450" y1="78" x2="450" y2="130" />
+              <line x1="450" y1="78" x2="690" y2="130" />
+              <line x1="450" y1="190" x2="350" y2="250" />
+              <line x1="450" y1="190" x2="590" y2="250" />
+              <line x1="350" y1="310" x2="450" y2="340" />
+              <line x1="590" y1="310" x2="450" y2="340" />
+            </g>
+            <text class="mut" x="450" y="405" text-anchor="middle">Navegación mayormente lineal con saltos directos desde Inicio a secciones; retorno por menú lateral.</text>
+          </svg>
+        </div>
+        <p class="muted">Leyenda VSDM: rectángulos = vistas/secciones, flechas = transiciones navegables. El menú lateral provee acceso permanente a cualquier sección (navegación no secuencial).</p>
+      </section>
+
+      <section id="grid-flex">
+        <h3>Layout: CSS Grid + Flexbox</h3>
+        <p>La página usa <strong>Grid</strong> para el esqueleto (aside + contenido) y <strong>Flexbox</strong> para tarjetas y bloques internos. Abajo, un ejemplo de <em>grid‑areas</em> conceptual para una home típica.</p>
+        <div class="grid-areas">
+          <div class="ga"><h4>Header</h4><span class="muted">branding + nav</span></div>
+          <div class="ga"><h4>Hero</h4><span class="muted">mensaje principal</span></div>
+          <div class="ga"><h4>KPIs</h4><span class="muted">3‑4 métricas</span></div>
+          <div class="ga"><h4>Contenido</h4><span class="muted">texto + media</span></div>
+          <div class="ga"><h4>CTA</h4><span class="muted">llamado a acción</span></div>
+          <div class="ga"><h4>Footer</h4><span class="muted">legal + links</span></div>
+        </div>
+      </section>
+
+      <section id="glosario">
+        <h3>Glosario rápido</h3>
+        <ul>
+          <li><strong>Concurrencia</strong>: Progreso de múltiples tareas en intervalos solapados (no necesariamente simultáneas).</li>
+          <li><strong>Paralelismo</strong>: Ejecución simultánea real (múltiples núcleos o máquinas).</li>
+          <li><strong>Reloj lógico</strong>: Esquema para ordenar eventos sin reloj global.</li>
+          <li><strong>Idempotencia</strong>: Aplicar una operación múltiples veces produce el mismo efecto que una sola.</li>
+          <li><strong>Quórum</strong>: Reglas de lectura/escritura en sistemas replicados (p. ej., W+R&gt;N).</li>
+        </ul>
+      </section>
+          <section id="svg-min">
+        <h3>Ejemplo minimalista: Diagrama SVG de Concurrencia</h3>
+        <p class="muted">Dos procesos (P1 y P2), un envío y una recepción. Ideal para explicar happens‑before sin sobrecargar.</p>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 640 260" width="100%" height="100%" role="img" aria-label="Diagrama mínimo de concurrencia">
+            <defs>
+              <marker id="arrMini" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#7aa2f7" />
+              </marker>
+            </defs>
+            <!-- Lanes -->
+            <g stroke="#203041" stroke-width="2">
+              <line x1="140" y1="40" x2="140" y2="220" />
+              <line x1="500" y1="40" x2="500" y2="220" />
+            </g>
+            <!-- Labels -->
+            <g fill="var(--text)" font-size="14">
+              <text x="110" y="28">P1</text>
+              <text x="470" y="28">P2</text>
+            </g>
+            <!-- Events -->
+            <g fill="#172334" stroke="#2a3a50">
+              <circle cx="140" cy="80" r="8" />
+              <circle cx="500" cy="140" r="8" />
+            </g>
+            <!-- Message P1 -> P2 -->
+            <g stroke="#7aa2f7" stroke-width="2" fill="none" marker-end="url(#arrMini)">
+              <line x1="148" y1="80" x2="492" y2="140" />
+            </g>
+            <!-- Notes -->
+            <g fill="var(--muted)" font-size="12">
+              <text x="170" y="72">send m</text>
+              <text x="510" y="134">recv m</text>
+              <text x="200" y="200">Regla de Lamport: recv(m) ocurre después de send(m).</text>
+            </g>
+          </svg>
+        </div>
+        <details class="muted"><summary>Ver el SVG crudo para copiar/pegar</summary>
+<pre><code>&lt;svg viewBox=&quot;0 0 640 260&quot; role=&quot;img&quot; aria-label=&quot;Diagrama mínimo de concurrencia&quot;&gt;
+  &lt;defs&gt;
+    &lt;marker id=&quot;arrMini&quot; markerWidth=&quot;10&quot; markerHeight=&quot;10&quot; refX=&quot;8&quot; refY=&quot;3&quot; orient=&quot;auto&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+      &lt;path d=&quot;M0,0 L0,6 L9,3 z&quot; fill=&quot;#7aa2f7&quot; /&gt;
+    &lt;/marker&gt;
+  &lt;/defs&gt;
+  &lt;g stroke=&quot;#203041&quot; stroke-width=&quot;2&quot;&gt;
+    &lt;line x1=&quot;140&quot; y1=&quot;40&quot; x2=&quot;140&quot; y2=&quot;220&quot; /&gt;
+    &lt;line x1=&quot;500&quot; y1=&quot;40&quot; x2=&quot;500&quot; y2=&quot;220&quot; /&gt;
+  &lt;/g&gt;
+  &lt;g fill=&quot;#e7eef7&quot; font-size=&quot;14&quot;&gt;
+    &lt;text x=&quot;110&quot; y=&quot;28&quot;&gt;P1&lt;/text&gt;
+    &lt;text x=&quot;470&quot; y=&quot;28&quot;&gt;P2&lt;/text&gt;
+  &lt;/g&gt;
+  &lt;g fill=&quot;#172334&quot; stroke=&quot;#2a3a50&quot;&gt;
+    &lt;circle cx=&quot;140&quot; cy=&quot;80&quot; r=&quot;8&quot; /&gt;
+    &lt;circle cx=&quot;500&quot; cy=&quot;140&quot; r=&quot;8&quot; /&gt;
+  &lt;/g&gt;
+  &lt;g stroke=&quot;#7aa2f7&quot; stroke-width=&quot;2&quot; fill=&quot;none&quot; marker-end=&quot;url(#arrMini)&quot;&gt;
+    &lt;line x1=&quot;148&quot; y1=&quot;80&quot; x2=&quot;492&quot; y2=&quot;140&quot; /&gt;
+  &lt;/g&gt;
+  &lt;g fill=&quot;#9fb3c8&quot; font-size=&quot;12&quot;&gt;
+    &lt;text x=&quot;170&quot; y=&quot;72&quot;&gt;send m&lt;/text&gt;
+    &lt;text x=&quot;510&quot; y=&quot;134&quot;&gt;recv m&lt;/text&gt;
+    &lt;text x=&quot;200&quot; y=&quot;200&quot;&gt;Lamport: recv(m) &gt; send(m).&lt;/text&gt;
+  &lt;/g&gt;
+&lt;/svg&gt;
+</code></pre>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
